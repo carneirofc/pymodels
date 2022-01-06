@@ -78,7 +78,7 @@ def create_lattice(optics_mode=default_optics_mode):
 
     # --- correctors ---
     chv = sextupole('CHV', corr_length, 0.0)
-    qs = quadrupole('QS', corr_length, 0.0)
+    # cv = sextupole('CV', corr_length, 0.0)
 
     # --- quadrupoles ---
     qf2L = quadrupole('QF2L', 0.112, strengths['qf2l'])  # LINAC TRIPLET
@@ -112,7 +112,23 @@ def create_lattice(optics_mode=default_optics_mode):
     bp = _segmented_models.dipole(sign=+1)
     bn = _segmented_models.dipole(sign=-1)
 
-    septin = _segmented_models.septum(strengths)
+    # -- bo injection septum --
+    dip_nam = 'InjSept'
+    dip_len = 0.50
+    dip_ang = 21.75 * deg_2_rad
+    dip_K = 0.0
+    dip_S = 0.00
+    septine = rbend_sirius(dip_nam, dip_len/2, dip_ang/2,
+                           1*dip_ang/2, 0*dip_ang,
+                           0, 0, 0, [0, 0, 0], [0, dip_K, dip_S])
+    septins = rbend_sirius(dip_nam, dip_len/2, dip_ang/2,
+                           0*dip_ang, 1*dip_ang/2,
+                           0, 0, 0, [0, 0, 0], [0, dip_K, dip_S])
+    bseptin = marker('bInjS')
+    eseptin = marker('eInjS')
+    # Excluded ch to make it consistent with other codes.
+    # The corrector can be implemented in the polynomB:
+    septin = [bseptin, septine, septins, eseptin]
 
     #  --- lines ---
     s00_1 = [l80, l4, qf2L, l30, l8, qd2L, l30, l8, qf2L, l30, l8, qf3L]
@@ -141,7 +157,7 @@ def create_lattice(optics_mode=default_optics_mode):
         l200, l70, l2, lp4, chv, l200, l200, l100, l80, lp5, fct,
         l100, l40, ict, l200, l100, l5, lp7, bpm, l100, l10, l5, lp6]
     s04_2 = [l200, l10, l6]
-    s04_3 = [l100, l70, scrn, l60, l1, lp2, qs, l80, l6, lp6]
+    s04_3 = [l100, l70, scrn, l60, l1, lp2, chv, l80, l6, lp6]
 
     sector00 = [s00_1, s00_2, spec]
     sector01 = [s01_1, qd1, s01_2, qf1, s01_3, bn]
@@ -177,74 +193,16 @@ def get_optics_mode(optics_mode):
     """Return magnet strengths of a given opics mode."""
     # -- selection of optics mode --
     if optics_mode == 'M1':
-        # Initial Conditions from Linac measured parameters on 30/08/2019
-        # Linac second quadrupole triplet set to same values used during
-        # measurements
-        # (Sem tripleto)
-        # QD4 freed to be focusing in fitting.
-        twiss_at_start = _pyacc_opt.Twiss.make_new(
-            beta=[1.45401, 2.47656], alpha=[-1.57249, 0.527312], etax=[0, 0])
-
-        strengths = {
-            'qf2l': 12.37,
-            'qd2l': -14.85,
-            'qf3l': 6.3387,
-            'qd1': -8.8224,
-            'qf1':  13.3361,
-            'qd2a': -10.8698,
-            'qf2a': 13.8136,
-            'qf2b': 6.9037,
-            'qd2b': -6.3496,
-            'qf3':  13.4901,
-            'qd3': -10.8577,
-            'qf4':  8.1889,
-            'qd4':  0.6693,
-            'injsept_kxl': -0.39475202,
-            'injsept_kyl': +0.35823882,
-            'injsept_ksxl': -0.04944937,
-            'injsept_ksyl': -0.00393883,
-            }
-
-    if optics_mode == 'M2':
-        # Initial Conditions from Linac measured parameters on 30/08/2019
-        # Linac second quadrupole triplet set to same values used during
-        # measurements
-        # (Sem tripleto)
-        twiss_at_start = _pyacc_opt.Twiss.make_new(
-            beta=[1.45401, 2.47656], alpha=[-1.57249, 0.527312], etax=[0, 0])
-
-        strengths = {
-            'qf2l': 12.37,
-            'qd2l': -14.85,
-            'qf3l': 6.342735948415,
-            'qd1': -8.822330690694,
-            'qf1': 13.336079810152,
-            'qd2a': -11.779088961602,
-            'qf2a': 14.331275527616,
-            'qf2b': 8.958478776817,
-            'qd2b': -8.99233133968,
-            'qf3': 11.263508962434,
-            'qd3': -6.891349798498,
-            'qf4': 9.84840688362,
-            'qd4': -3.114739958144,
-            'injsept_kxl': -0.3,
-            'injsept_kyl': 0.3,
-            'injsept_ksxl': 0.0,
-            'injsept_ksyl': 0.0,
-            }
-
-    if optics_mode == 'M3':
         # Initial Conditions from Linac measured parameters on 16/07/2019
         # Linac second quadrupole triplet set to same values used during
-        # measurements
-        # (Sem tripleto)
+        # measurements (Sem tripleto)
         twiss_at_start = _pyacc_opt.Twiss.make_new(
             beta=[2.71462, 4.69925], alpha=[-2.34174, 1.04009],
             etax=[0.0, 0.0])
         strengths = {
-            'qf2l': 12.37,
+            'qf2l':  12.37,
             'qd2l': -14.85,
-            'qf3l': 5.713160289024,
+            'qf3l':  5.713160289024,
             'qd1': -8.821809143987,
             'qf1': 13.335946597802,
             'qd2a': -11.859318300947,
@@ -255,13 +213,9 @@ def get_optics_mode(optics_mode):
             'qd3': -4.974049498621,
             'qf4': 11.168208453391,
             'qd4': -6.191738912262,
-            'injsept_kxl': 0.0,
-            'injsept_kyl': 0.0,
-            'injsept_ksxl': 0.0,
-            'injsept_ksyl': 0.0,
         }
 
-    elif optics_mode == 'M4':
+    elif optics_mode == 'M2':
         # Initial Conditions from Linac measured parameters on 16/07/2019
         # Linac second quadrupole triplet is used to match the LBT optics
         # (Sem tripleto)
@@ -269,9 +223,9 @@ def get_optics_mode(optics_mode):
             beta=[2.71462, 4.69925], alpha=[-2.34174, 1.04009],
             etax=[0.0, 0.0])
         strengths = {
-            'qf2l':  11.78860,
-            'qd2l': -14.298290,
-            'qf3l': 4.801910,
+            'qf2L':  11.78860,
+            'qd2L': -14.298290,
+            'qf3L': 4.801910,
             'qd1': -8.822256368219,
             'qf1': 13.336060990905,
             'qd2a': -9.382785447106,
@@ -282,10 +236,6 @@ def get_optics_mode(optics_mode):
             'qd3': -5.519539215470,
             'qf4': 11.635406805193,
             'qd4': -6.936225524796,
-            'injsept_kxl': 0.0,
-            'injsept_kyl': 0.0,
-            'injsept_ksxl': 0.0,
-            'injsept_ksyl': 0.0,
         }
     else:
         _pyacc_acc.AcceleratorException(
@@ -310,8 +260,7 @@ def set_num_integ_steps(the_line):
 
     ch_indices = _pyacc_lat.find_indices(the_line, 'fam_name', 'CHV')
     cv_indices = _pyacc_lat.find_indices(the_line, 'fam_name', 'CHV')
-    qs_indices = _pyacc_lat.find_indices(the_line, 'fam_name', 'QS')
-    corr_indices = ch_indices + cv_indices + qs_indices
+    corr_indices = ch_indices + cv_indices
     for idx in corr_indices:
         the_line[idx].nr_steps = 5
 

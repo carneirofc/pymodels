@@ -4,12 +4,12 @@ from siriuspy.namesys import join_name as _join_name
 import pyaccel as _pyaccel
 
 _family_segmentation = {
-    'B': 16, 'CH': 1, 'CV': 1, 'CHV': 1, 'QS': 1,
+    'B': 16, 'CH': 1, 'CV': 1, 'CHV': 1,
     'QF2L': 1, 'QD2L': 1, 'QF3L': 1,
     'Spect': 2,
     'QD1': 1, 'QF1': 1, 'QD2A': 1, 'QF2A': 1, 'QF2B': 1, 'QD2B': 1,
     'QF3': 1, 'QD3': 1, 'QF4': 1, 'QD4': 1,
-    'InjSept': 6,
+    'InjSept': 2,
     'ICT': 1, 'FCT': 1, 'SlitH': 1, 'SlitV': 1, 'Scrn': 1, 'BPM': 1
     }
 
@@ -47,7 +47,6 @@ family_mapping = {
     'CHV':     'general_corrector',
     'CH':      'horizontal_corrector',
     'CV':      'vertical_corrector',
-    'QS':      'skew_quadrupole',
     'QF2L':    'linac_quadrupole',
     'QD2L':    'linac_quadrupole',
     'QF3L':    'linac_quadrupole',
@@ -105,7 +104,7 @@ def families_sextupoles():
 
 def families_skew_correctors():
     """Return skew corrector families."""
-    return ['QS']
+    return []
 
 
 def families_rf():
@@ -154,7 +153,10 @@ def get_family_data(lattice):
     latt_dict = _pyaccel.lattice.find_dict(lattice, 'fam_name')
     section_map = get_section_name_mapping(lattice)
 
-    # fill the data dictionary with index info:
+    def get_idx(x):
+        return x[0]
+
+    # fill the data dictionary with index info ######
     data = {}
     for key, idx in latt_dict.items():
         nr = _family_segmentation.get(key)
@@ -163,37 +165,30 @@ def get_family_data(lattice):
         # create a list of lists for the indexes
         data[key] = [idx[i*nr:(i+1)*nr] for i in range(len(idx)//nr)]
 
-    data['CH'] = list(data['CHV'])
-    data['CV'] = list(data['CHV'])
+    data['CH'] = data['CHV']
+    data['CV'] = data['CHV']
 
-    # last corrector is now a skew quad and a CV:
-    data['CV'].extend(data['QS'])
+    def f(x):
+        return '{0:d}'.format(x)
 
     # now organize the data dictionary:
     new_data = dict()
     for key, idx in data.items():
         # find out the name of the section each element is installed
-        secs = [section_map[i[0]] for i in idx]
+        secs = [section_map[get_idx(i)] for i in idx]
 
         # find out if there are more than one element per section and
         # attribute a number to it
         num = len(secs)*['']
         if len(secs) > 1:
             j = 1
-            if secs[0] == secs[1]:
-                num[0] = '{0:d}'.format(j)
-                j += 1
+            num[0] = f(j) if secs[0] == secs[1] else ''
+            j = j+1 if secs[0] == secs[1] else 1
             for i in range(1, len(secs)-1):
-                if secs[i] == secs[i+1] or secs[i] == secs[i-1]:
-                    num[i] = '{0:d}'.format(j)
-
-                if secs[i] == secs[i+1]:
-                    j += 1
-                else:
-                    j = 1
-
-            if secs[-1] == secs[-2]:
-                num[-1] = '{0:d}'.format(j)
+                num[i] = f(j) if secs[i] == secs[i+1] or secs[i] == secs[i-1] \
+                    else ''
+                j = j+1 if secs[i] == secs[i+1] else 1
+            num[-1] = f(j) if (secs[-1] == secs[-2]) else ''
 
         new_data[key] = {'index': idx, 'subsection': secs, 'instance': num}
 

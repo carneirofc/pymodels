@@ -3,12 +3,11 @@
 from siriuspy.namesys import join_name as _join_name
 import pyaccel as _pyaccel
 
-
 _family_segmentation = {
-    'B': 20, 'CH': 1, 'CV':  1,
+    'B': 20, 'CH': 1, 'CV': 1,
     'QF1A': 1, 'QF1B': 1, 'QD2': 1, 'QF2': 1, 'QF3': 1,
     'QD4A': 1, 'QF4': 1, 'QD4B': 1,
-    'InjSeptF': 6, 'InjSeptG': 6, 'EjeSeptF': 6, 'EjeSeptG': 6,
+    'InjSeptF': 2, 'InjSeptG': 2, 'EjeSeptF': 2, 'EjeSeptG': 2,
     'ICT': 1, 'FCT': 1, 'Scrn': 1, 'BPM': 1
     }
 
@@ -113,6 +112,7 @@ def get_section_name_mapping(lattice):
     # Find indices important to define the change of the names of the sections
     b = _pyaccel.lattice.find_indices(lattice, 'fam_name', 'B')
     b_nrsegs = len(b)//3
+    start = _pyaccel.lattice.find_indices(lattice, 'fam_name', 'start')
 
     # Names of the sections:
     secs = ['01', '02', '03', '04']
@@ -142,30 +142,16 @@ def get_family_data(lattice):
     latt_dict = _pyaccel.lattice.find_dict(lattice, 'fam_name')
     section_map = get_section_name_mapping(lattice)
 
-    # Fill the data dictionary with index info ######
+    # ### Fill the data dictionary with index info ###
     data = {}
     for key, idx in latt_dict.items():
-        nr = _family_segmentation.get(key)
-        if nr is None:
+        nr_ = _family_segmentation.get(key)
+        if nr_ is None:
             continue
         # Create a list of lists for the indexes
-        data[key] = [idx[i*nr:(i+1)*nr] for i in range(len(idx)//nr)]
+        data[key] = [idx[i*nr_:(i+1)*nr_] for i in range(len(idx)//nr_)]
 
-    # ch - slow horizontal correctors
-    idx = []
-    fams = ['QF1B', 'QF2', 'QF3', 'QF4']
-    for fam in fams:
-        idx.extend(data[fam])
-    data['CH'] = sorted(idx, key=lambda x: x[0])
-
-    # cv - slow horizontal correctors (inside quadrupoles)
-    idx = []
-    fams = ['QF1A', 'QD2', 'QD4A', 'QD4B', 'CV']
-    for fam in fams:
-        idx.extend(data[fam])
-    data['CV'] = sorted(idx, key=lambda x: x[0])
-
-    # now organize the data dictionary:
+    # Now organize the data dictionary:
     new_data = dict()
     for key, idx in data.items():
         # find out the name of the section each element is installed
@@ -176,20 +162,15 @@ def get_family_data(lattice):
         num = len(secs)*['']
         if len(secs) > 1:
             j = 1
-            if secs[0] == secs[1]:
-                num[0] = '{0:d}'.format(j)
-                j += 1
+            num[0] = f'{j:d}' if secs[0] == secs[1] else ''
+            j = j + 1 if secs[0] == secs[1] else 1
             for i in range(1, len(secs)-1):
                 if secs[i] == secs[i+1] or secs[i] == secs[i-1]:
-                    num[i] = '{0:d}'.format(j)
-
-                if secs[i] == secs[i+1]:
-                    j += 1
+                    num[i] = f'{j:d}'
                 else:
-                    j = 1
-
-            if secs[-1] == secs[-2]:
-                num[-1] = '{0:d}'.format(j)
+                    num[i] = ''
+                j = j + 1 if secs[i] == secs[i+1] else 1
+            num[-1] = f'{j:d}' if (secs[-1] == secs[-2]) else ''
 
         new_data[key] = {'index': idx, 'subsection': secs, 'instance': num}
 
